@@ -52,7 +52,7 @@
 			var yOffset = 0;
 			var xOffset = 0;
 			var width;
-			var fontSize;
+			var fontSize = this.internal.getFontSize();
 			var start = 0, end = 0, obj = {};
 			var linehight = 0;
 
@@ -80,6 +80,85 @@
 				y += heights[i];
 			}
 			return y;
+		};
+
+		jsPDFAPI.drawTable = function(table_DATA, marginConfig) {
+			var fontSize = this.internal.getFontSize();
+			var xOffset, yOffset, pageStart;
+
+			var defaultConfig = {
+				xstart : 20,
+				ystart : 20,
+				tablestart : 20,
+				marginright : 20,
+				xOffset : 10,
+				yOffset : 10
+			};
+
+			if (!marginConfig) {
+				marginConfig = {
+					xstart : 20,
+					ystart : 20,
+					tablestart : 20,
+					marginright : 20,
+					xOffset : 10,
+					yOffset : 10
+				}
+			} else {
+				for (var key in defaultConfig) {
+					if (!marginConfig[key]) {
+						marginConfig[key] = defaultConfig[key];
+					}
+				}
+			}
+
+			pageStart = marginConfig.tablestart;
+			xOffset = marginConfig.xOffset;
+			yOffset = marginConfig.yOffset;
+			intializePdf(table_DATA, marginConfig);
+
+			if ((dim[3] + marginConfig.tablestart) > (this.internal.pageSize.height)) {
+				cSplitIndex.push(table_DATA.length);
+				for (var ig = 0; ig < cSplitIndex.length; ig++) {
+					tabledata = [];
+					tabledata = table_DATA.slice(jg, cSplitIndex[ig]);
+					this.insertHeader(tabledata);
+					drawTableOnPdf(tabledata, dim, true, false);
+					pageStart = marginConfig.ystart;
+					intializePdf(tabledata, marginConfig);
+					jg = cSplitIndex[ig];
+					if ((ig + 1) != cSplitIndex.length) {
+						this.addPage();
+					}
+				}
+			} else {
+				insertHeader(table_DATA)
+				drawTableOnPdf(table_DATA, dim, true, false);
+			}
+			return nextStart;
+		};
+
+		function intializePdf(data, marginConfig) {
+			marginConfig.xOffset = marginConfig.xOffset || 5;
+			marginConfig.yOffset = marginConfig.yOffset || 5
+			marginConfig.pageWidth = this.internal.pageSize.width - marginConfig.xstart - 20;
+			columnCount = calColumnCount(data);
+			rowCount = data.length;
+			width = dim[2] / columnCount;
+			height = dim[2] / rowCount;
+			dim[3] = calculateDimensions(data, marginConfig);
+		};
+
+		function drawTableOnPdf(table, dimensions, hControl, bControl) {
+			columnCount = calColumnCount(table);
+			rowCount = table.length;
+			dimensions[3] = this.caldimensions(table, dimensions);
+			width = dimensions[2] / columnCount;
+			height = dimensions[2] / rowCount;
+			drawRows(rowCount, dimensions, hControl);
+			drawColumns(columnCount, dimensions);
+			nextStart = jsPDFAPI.insertData(rowCount, columnCount, dimensions, table, bControl);
+			return nextStart;
 		};
 
 		function tableToJson(id) {
